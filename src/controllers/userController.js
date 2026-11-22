@@ -21,4 +21,35 @@ async function createUser(request, response) {
   return response.status(201).json(publicUser(user))
 }
 
-module.exports = { createUser }
+async function getUser(request, response) {
+  const user = await User.findByPk(request.params.id)
+  if (!user) return response.status(404).json({ error: 'Usuário não encontrado.' })
+
+  return response.status(200).json(publicUser(user))
+}
+
+async function updateUser(request, response) {
+  const user = await User.findByPk(request.params.id)
+  if (!user) return response.status(404).json({ error: 'Usuário não encontrado.' })
+  if (Number(request.user.sub) !== user.id) return response.status(403).json({ error: 'Sem permissão para alterar este usuário.' })
+
+  const { firstname, surname, email } = request.body
+  if (!firstname || !surname || !email) return response.status(400).json({ error: 'Nome, sobrenome e e-mail são obrigatórios.' })
+
+  const userWithSameEmail = await User.findOne({ where: { email } })
+  if (userWithSameEmail && userWithSameEmail.id !== user.id) return response.status(400).json({ error: 'E-mail já cadastrado.' })
+
+  await user.update({ firstname, surname, email })
+  return response.status(204).send()
+}
+
+async function deleteUser(request, response) {
+  const user = await User.findByPk(request.params.id)
+  if (!user) return response.status(404).json({ error: 'Usuário não encontrado.' })
+  if (Number(request.user.sub) !== user.id) return response.status(403).json({ error: 'Sem permissão para excluir este usuário.' })
+
+  await user.destroy()
+  return response.status(204).send()
+}
+
+module.exports = { createUser, getUser, updateUser, deleteUser }
